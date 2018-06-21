@@ -15,9 +15,7 @@ class RecommendationService(demo_pb2_grpc.RecommendationServiceServicer):
         num_prodcuts = len(cat_response.products)
         num_return = min(max_responses, num_prodcuts)
 
-        # sample list of indicies to return
-        indices = random.sample(range(num_prodcuts), num_return)
-        # fetch product ids from indices
+        indices = random.sample(range(num_prodcuts), min(max_responses, num_prodcuts))
         prod_list = [cat_response.products[i].id for i in indices]
         print("handling request: {}".format(prod_list))
 
