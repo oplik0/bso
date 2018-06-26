@@ -105,7 +105,13 @@ func (fe *frontendServer) productHandler(w http.ResponseWriter, r *http.Request)
 	}
 	currencies, err := fe.getCurrencies(r.Context())
 	if err != nil {
-		renderHTTPError(w, errors.Wrap(err, "could not retrieve currencies"), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("could not retrieve currencies: %+v", err), http.StatusInternalServerError)
+		return
+	}
+
+	cart, err := fe.getCart(r.Context(), sessionID(r))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("could not retrieve cart: %+v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -126,6 +132,13 @@ func (fe *frontendServer) productHandler(w http.ResponseWriter, r *http.Request)
 		renderHTTPError(w, errors.Wrap(err, "failed to get product recommendations"), http.StatusInternalServerError)
 		return
 	}
+
+	recommendations, err := fe.getRecommendations(r.Context(), sessionID(r), []string{id})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get product recommendations: %+v", err), http.StatusInternalServerError)
+		return
+	}
+	log.Printf("cart size=%d", len(cart))
 
 	product := struct {
 		Item  *pb.Product
@@ -200,6 +213,12 @@ func (fe *frontendServer) viewCartHandler(w http.ResponseWriter, r *http.Request
 	shippingCost, err := fe.getShippingQuote(r.Context(), cart, currentCurrency(r))
 	if err != nil {
 		renderHTTPError(w, errors.Wrap(err, "failed to get shipping quote"), http.StatusInternalServerError)
+		return
+	}
+
+	recommendations, err := fe.getRecommendations(r.Context(), sessionID(r), cartIDs(cart))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get product recommendations: %+v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -294,12 +313,13 @@ func (fe *frontendServer) placeOrderHandler(w http.ResponseWriter, r *http.Reque
 		totalPaid = money.Must(money.Sum(totalPaid, *v.GetCost()))
 	}
 
-	if err := templates.ExecuteTemplate(w, "order", map[string]interface{}{
-		"session_id":      sessionID(r),
+	if err := templates.ExecuteTemplate(w, "cart", map[string]interface{}{
 		"user_currency":   currentCurrency(r),
-		"order":           order.GetOrder(),
-		"total_paid":      &totalPaid,
+		"currencies":      currencies,
+		"session_id":      sessionID(r),
 		"recommendations": recommendations,
+		"cart_size":       len(cart),
+		"items":           items,
 	}); err != nil {
 		log.Println(err)
 	}
@@ -367,8 +387,4 @@ func cartIDs(c []*pb.CartItem) []string {
 		out[i] = v.GetProductId()
 	}
 	return out
-}
-
-func renderMoney(money pb.Money) string {
-	return fmt.Sprintf("%s %d.%02d", money.GetCurrencyCode(), money.GetUnits(), money.GetNanos()/10000000)
 }

@@ -43,12 +43,6 @@ type frontendServer struct {
 
 	recommendationSvcAddr string
 	recommendationSvcConn *grpc.ClientConn
-
-	checkoutSvcAddr string
-	checkoutSvcConn *grpc.ClientConn
-
-	shippingSvcAddr string
-	shippingSvcConn *grpc.ClientConn
 }
 
 func main() {
@@ -65,15 +59,24 @@ func main() {
 	mustMapEnv(&svc.currencySvcAddr, "CURRENCY_SERVICE_ADDR")
 	mustMapEnv(&svc.cartSvcAddr, "CART_SERVICE_ADDR")
 	mustMapEnv(&svc.recommendationSvcAddr, "RECOMMENDATION_SERVICE_ADDR")
-	mustMapEnv(&svc.checkoutSvcAddr, "CHECKOUT_SERVICE_ADDR")
-	mustMapEnv(&svc.shippingSvcAddr, "SHIPPING_SERVICE_ADDR")
 
-	mustConnGRPC(ctx, &svc.currencySvcConn, svc.currencySvcAddr)
-	mustConnGRPC(ctx, &svc.productCatalogSvcConn, svc.productCatalogSvcAddr)
-	mustConnGRPC(ctx, &svc.cartSvcConn, svc.cartSvcAddr)
-	mustConnGRPC(ctx, &svc.recommendationSvcConn, svc.recommendationSvcAddr)
-	mustConnGRPC(ctx, &svc.shippingSvcConn, svc.shippingSvcAddr)
-	mustConnGRPC(ctx, &svc.checkoutSvcConn, svc.checkoutSvcAddr)
+	var err error
+	svc.currencySvcConn, err = grpc.DialContext(ctx, svc.currencySvcAddr, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("failed to connect currency service: %+v", err)
+	}
+	svc.productCatalogSvcConn, err = grpc.DialContext(ctx, svc.productCatalogSvcAddr, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("failed to connect productcatalog service: %+v", err)
+	}
+	svc.cartSvcConn, err = grpc.DialContext(ctx, svc.cartSvcAddr, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("failed to connect cart service at %s: %+v", svc.cartSvcAddr, err)
+	}
+	svc.recommendationSvcConn, err = grpc.DialContext(ctx, svc.recommendationSvcAddr, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("failed to connect recommendation service at %s: %+v", svc.recommendationSvcConn, err)
+	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", ensureSessionID(svc.homeHandler)).Methods(http.MethodGet, http.MethodHead)
