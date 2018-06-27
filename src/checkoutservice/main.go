@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "./genproto"
-	money "./money"
+	pb "checkoutservice/genproto"
+	money "checkoutservice/money"
 )
 
 const (
@@ -68,13 +68,13 @@ func (cs *checkoutService) CreateOrder(ctx context.Context, req *pb.CreateOrderR
 	log.Printf("[CreateOrder] user_id=%q user_currency=%q", req.UserId, req.UserCurrency)
 	resp := new(pb.CreateOrderResponse)
 
-	shippingQuoteUSD, err := cs.quoteShipping(ctx, req.Address, nil) // TODO(ahmetb): query CartService for items
+	prep, err := cs.prepareOrderItemsAndShippingQuoteFromCart(ctx, req.UserId, req.UserCurrency, req.Address)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "shipping quote failure: %+v", err)
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
-	resp.ShippingCost = shippingQuoteUSD
-	// TODO(ahmetb) convert to req.UserCurrency
-	// TODO(ahmetb) calculate resp.OrderItem with req.UserCurrency
+
+	resp.Items = prep.orderItems
+	resp.ShippingCost = prep.shippingCostLocalized
 	return resp, nil
 }
 
@@ -96,23 +96,6 @@ func (cs *checkoutService) PlaceOrder(ctx context.Context, req *pb.PlaceOrderReq
 		Nanos: 0}
 	total = money.Must(money.Sum(total, *prep.shippingCostLocalized))
 	for _, it := range prep.orderItems {
-		total = money.Must(money.Sum(total, *it.Cost))
-	}
-
-	shippingUsd, err := cs.quoteShipping(ctx, req.Address, cartItems) // TODO(ahmetb): query CartService for items
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "shipping quote failure: %+v", err)
-	}
-	shippingPrice, err := cs.convertCurrency(ctx, shippingUsd, req.UserCurrency)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to convert shipping cost to currency: %+v", err)
-	}
-
-	total := pb.Money{CurrencyCode: req.UserCurrency,
-		Units: 0,
-		Nanos: 0}
-	total = money.Must(money.Sum(total, *shippingPrice))
-	for _, it := range orderItems {
 		total = money.Must(money.Sum(total, *it.Cost))
 	}
 
@@ -144,6 +127,37 @@ func (cs *checkoutService) PlaceOrder(ctx context.Context, req *pb.PlaceOrderReq
 	}
 	resp := &pb.PlaceOrderResponse{Order: orderResult}
 	return resp, nil
+}
+
+type orderPrep struct {
+	orderItems            []*pb.OrderItem
+	cartItems             []*pb.CartItem
+	shippingCostLocalized *pb.Money
+}
+
+func (cs *checkoutService) prepareOrderItemsAndShippingQuoteFromCart(ctx context.Context, userID, userCurrency string, address *pb.Address) (orderPrep, error) {
+	var out orderPrep
+	cartItems, err := cs.getUserCart(ctx, userID)
+	if err != nil {
+		return out, fmt.Errorf("cart failure: %+v", err)
+	}
+	orderItems, err := cs.prepOrderItems(ctx, cartItems, userCurrency)
+	if err != nil {
+		return out, fmt.Errorf("failed to prepare order: %+v", err)
+	}
+	shippingUSD, err := cs.quoteShipping(ctx, address, cartItems)
+	if err != nil {
+		return out, fmt.Errorf("shipping quote failure: %+v", err)
+	}
+	shippingPrice, err := cs.convertCurrency(ctx, shippingUSD, userCurrency)
+	if err != nil {
+		return out, fmt.Errorf("failed to convert shipping cost to currency: %+v", err)
+	}
+
+	out.shippingCostLocalized = shippingPrice
+	out.cartItems = cartItems
+	out.orderItems = orderItems
+	return out, nil
 }
 
 func (cs *checkoutService) quoteShipping(ctx context.Context, address *pb.Address, items []*pb.CartItem) (*pb.Money, error) {
