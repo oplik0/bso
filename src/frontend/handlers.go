@@ -115,7 +115,7 @@ func (fe *frontendServer) productHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	cart, err := fe.getCart(r.Context(), sessionID(r))
+	price, err := fe.convertCurrency(r.Context(), p.GetPriceUsd(), currentCurrency(r))
 	if err != nil {
 		renderHTTPError(w, errors.Wrap(err, "could not retrieve cart"), http.StatusInternalServerError)
 		return
@@ -245,71 +245,6 @@ func (fe *frontendServer) viewCartHandler(w http.ResponseWriter, r *http.Request
 			Item:     p,
 			Quantity: item.GetQuantity(),
 			Price:    &multPrice}
-		totalPrice = money.Must(money.Sum(totalPrice, multPrice))
-	}
-	totalPrice = money.Must(money.Sum(totalPrice, *shippingCost))
-
-	year := time.Now().Year()
-	if err := templates.ExecuteTemplate(w, "cart", map[string]interface{}{
-		"user_currency":    currentCurrency(r),
-		"currencies":       currencies,
-		"session_id":       sessionID(r),
-		"recommendations":  recommendations,
-		"cart_size":        len(cart),
-		"shipping_cost":    shippingCost,
-		"total_cost":       totalPrice,
-		"items":            items,
-		"expiration_years": []int{year, year + 1, year + 2, year + 3, year + 4},
-	}); err != nil {
-		log.Println(err)
-	}
-}
-
-func (fe *frontendServer) placeOrderHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("[checkout] session_id=%s", sessionID(r))
-
-	var (
-		email         = r.FormValue("email")
-		streetAddress = r.FormValue("street_address")
-		zipCode, _    = strconv.ParseInt(r.FormValue("zip_code"), 10, 32)
-		city          = r.FormValue("city")
-		state         = r.FormValue("state")
-		country       = r.FormValue("country")
-		ccNumber      = r.FormValue("credit_card_number")
-		ccMonth, _    = strconv.ParseInt(r.FormValue("credit_card_expiration_month"), 10, 32)
-		ccYear, _     = strconv.ParseInt(r.FormValue("credit_card_expiration_year"), 10, 32)
-		ccCVV, _      = strconv.ParseInt(r.FormValue("credit_card_cvv"), 10, 32)
-	)
-
-	order, err := pb.NewCheckoutServiceClient(fe.checkoutSvcConn).
-		PlaceOrder(r.Context(), &pb.PlaceOrderRequest{
-			Email: email,
-			CreditCard: &pb.CreditCardInfo{
-				CreditCardNumber:          ccNumber,
-				CreditCardExpirationMonth: int32(ccMonth),
-				CreditCardExpirationYear:  int32(ccYear),
-				CreditCardCvv:             int32(ccCVV)},
-			UserId:       sessionID(r),
-			UserCurrency: currentCurrency(r),
-			Address: &pb.Address{
-				StreetAddress: streetAddress,
-				City:          city,
-				State:         state,
-				ZipCode:       int32(zipCode),
-				Country:       country},
-		})
-	if err != nil {
-		renderHTTPError(w, errors.Wrap(err, "failed to complete the order"), http.StatusInternalServerError)
-		return
-	}
-	log.Printf("order #%s completed", order.GetOrder().GetOrderId())
-
-	order.GetOrder().GetItems()
-	recommendations, _ := fe.getRecommendations(r.Context(), sessionID(r), nil)
-
-	totalPaid := *order.GetOrder().GetShippingCost()
-	for _, v := range order.GetOrder().GetItems() {
-		totalPaid = money.Must(money.Sum(totalPaid, *v.GetCost()))
 	}
 
 	if err := templates.ExecuteTemplate(w, "cart", map[string]interface{}{
