@@ -322,3 +322,7 @@ func cartIDs(c []*pb.CartItem) []string {
 	}
 	return out
 }
+
+func renderMoney(money pb.Money) string {
+	return fmt.Sprintf("%s %d.%02d", money.GetCurrencyCode(), money.GetUnits(), money.GetNanos()/10000000)
+}
