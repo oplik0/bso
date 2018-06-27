@@ -102,14 +102,17 @@ function convert (call, callback) {
         units: euros.units * data[request.to_code],
         nanos: euros.nanos * data[request.to_code]
       });
-      result.nanos = Math.round(result.nanos);
+
+      result.units = Math.floor(result.units)
+      result.nanos = Math.floor(result.nanos)
       result.currency_code = request.to_code;
 
-      console.log('Conversion request successful.');
+      console.log(`Conversion request successful ${result.nanos}..${result.nanos}`);
       callback(null, result);
     });
   } catch (err) {
     console.error('Conversion request failed.');
+    console.error(err);
     callback(err.message);
   }
 }
