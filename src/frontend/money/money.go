@@ -107,10 +107,10 @@ func Sum(l, r pb.Money) (pb.Money, error) {
 
 // MultiplySlow is a slow multiplication operation done through adding the value
 // to itself n-1 times.
-func MultiplySlow(m pb.Money, n uint32) pb.Money {
+func MultiplySlow(m pb.MoneyAmount, n uint32) pb.MoneyAmount {
 	out := m
 	for n > 1 {
-		out = Must(Sum(out, m))
+		out = Sum(out, m)
 		n--
 	}
 	return out
