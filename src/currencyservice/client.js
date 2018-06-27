@@ -29,9 +29,9 @@ const client = new shopProto.CurrencyService(`localhost:${PORT}`,
 
 const request = {
   from: {
-    currency_code: 'USD',
+    currency_code: 'CHF',
     units: 300,
-    nanos: 500000000
+    nanos: 0
   },
   to_code: 'EUR'
 };

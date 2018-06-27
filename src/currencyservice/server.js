@@ -53,6 +53,7 @@ function _getCurrencyData (callback) {
       });
     });
   } else {
+    console.log('Using cached currency data...');
     callback(_data);
   }
 }
@@ -82,7 +83,7 @@ function getSupportedCurrencies (call, callback) {
  * Converts between currencies
  */
 function convert (call, callback) {
-  console.log('received conversion request');
+  console.log('Starting conversion request...');
   try {
     _getCurrencyData((data) => {
       const request = call.request;
@@ -101,17 +102,14 @@ function convert (call, callback) {
         units: euros.units * data[request.to_code],
         nanos: euros.nanos * data[request.to_code]
       });
-
-      result.units = Math.floor(result.units)
-      result.nanos = Math.floor(result.nanos)
+      result.nanos = Math.round(result.nanos);
       result.currency_code = request.to_code;
 
-      console.log(`conversion request successful`);
+      console.log('Conversion request successful.');
       callback(null, result);
     });
   } catch (err) {
-    console.error('conversion request failed.');
-    console.error(err);
+    console.error('Conversion request failed.');
     callback(err.message);
   }
 }
