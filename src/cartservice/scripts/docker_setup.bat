@@ -9,7 +9,7 @@ GOTO End1
 :local
   set REDIS_PORT=6379
   set REDIS_ADDR=localhost:%REDIS_PORT%
-  set LISTEN_ADDR=0.0.0.0
+  set LISTEN_ADDR=127.0.0.1
   set PORT=7070
 
   echo running redis emulator locally on a separate window
@@ -24,7 +24,7 @@ GOTO End1
 :docker_local
   set REDIS_PORT=6379
   set REDIS_ADDR=redis:%REDIS_PORT%
-  set LISTEN_ADDR=0.0.0.0
+  set LISTEN_ADDR=127.0.0.1
   set PORT=7070
 
   echo run docker container with redis
