@@ -46,6 +46,9 @@ type frontendServer struct {
 
 	checkoutSvcAddr string
 	checkoutSvcConn *grpc.ClientConn
+
+	shippingSvcAddr string
+	shippingSvcConn *grpc.ClientConn
 }
 
 func main() {
@@ -63,6 +66,7 @@ func main() {
 	mustMapEnv(&svc.cartSvcAddr, "CART_SERVICE_ADDR")
 	mustMapEnv(&svc.recommendationSvcAddr, "RECOMMENDATION_SERVICE_ADDR")
 	mustMapEnv(&svc.checkoutSvcAddr, "CHECKOUT_SERVICE_ADDR")
+	mustMapEnv(&svc.shippingSvcAddr, "SHIPPING_SERVICE_ADDR")
 
 	var err error
 	svc.currencySvcConn, err = grpc.DialContext(ctx, svc.currencySvcAddr, grpc.WithInsecure())
@@ -81,6 +85,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect recommendation service at %s: %+v", svc.recommendationSvcAddr, err)
 	}
+	svc.shippingSvcConn, err = grpc.DialContext(ctx, svc.shippingSvcAddr, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("failed to connect shipping service at %s: %+v", svc.shippingSvcAddr, err)
+	}
+	svc.checkoutSvcConn, err = grpc.DialContext(ctx, svc.checkoutSvcAddr, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("failed to connect checkout service at %s: %+v", svc.checkoutSvcAddr, err)
+	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", ensureSessionID(svc.homeHandler)).Methods(http.MethodGet, http.MethodHead)
@@ -90,7 +102,7 @@ func main() {
 	r.HandleFunc("/cart/empty", ensureSessionID(svc.emptyCartHandler)).Methods(http.MethodPost)
 	r.HandleFunc("/setCurrency", ensureSessionID(svc.setCurrencyHandler)).Methods(http.MethodPost)
 	r.HandleFunc("/logout", svc.logoutHandler).Methods(http.MethodGet)
-	r.HandleFunc("/checkout", ensureSessionID(svc.prepareCheckoutHandler)).Methods(http.MethodGet, http.MethodHead)
+	r.HandleFunc("/cart/checkout", ensureSessionID(svc.placeOrderHandler)).Methods(http.MethodPost)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 	log.Printf("starting server on " + addr + ":" + srvPort)
 	log.Fatal(http.ListenAndServe(addr+":"+srvPort, r))

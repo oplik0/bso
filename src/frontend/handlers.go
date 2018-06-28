@@ -221,6 +221,12 @@ func (fe *frontendServer) viewCartHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	shippingCost, err := fe.getShippingQuote(r.Context(), cart, currentCurrency(r))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get shipping quote: %+v", err), http.StatusInternalServerError)
+		return
+	}
+
 	type cartItemView struct {
 		Item     *pb.Product
 		Quantity int32
@@ -245,15 +251,73 @@ func (fe *frontendServer) viewCartHandler(w http.ResponseWriter, r *http.Request
 			Item:     p,
 			Quantity: item.GetQuantity(),
 			Price:    &multPrice}
+		totalPrice = money.Must(money.Sum(totalPrice, multPrice))
 	}
+	totalPrice = money.Must(money.Sum(totalPrice, *shippingCost))
 
+	year := time.Now().Year()
 	if err := templates.ExecuteTemplate(w, "cart", map[string]interface{}{
-		"user_currency":   currentCurrency(r),
-		"currencies":      currencies,
+		"user_currency":    currentCurrency(r),
+		"currencies":       currencies,
+		"session_id":       sessionID(r),
+		"recommendations":  recommendations,
+		"cart_size":        len(cart),
+		"shipping_cost":    shippingCost,
+		"total_cost":       totalPrice,
+		"items":            items,
+		"expiration_years": []int{year, year + 1, year + 2, year + 3, year + 4},
+	}); err != nil {
+		log.Println(err)
+	}
+}
+
+func (fe *frontendServer) placeOrderHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[checkout] session_id=%s", sessionID(r))
+
+	var (
+		email         = r.FormValue("email")
+		streetAddress = r.FormValue("street_address")
+		zipCode, _    = strconv.ParseInt(r.FormValue("zip_code"), 10, 32)
+		city          = r.FormValue("city")
+		state         = r.FormValue("state")
+		country       = r.FormValue("country")
+		ccNumber      = r.FormValue("credit_card_number")
+		ccMonth, _    = strconv.ParseInt(r.FormValue("credit_card_expiration_month"), 10, 32)
+		ccYear, _     = strconv.ParseInt(r.FormValue("credit_card_expiration_year"), 10, 32)
+		ccCVV, _      = strconv.ParseInt(r.FormValue("credit_card_cvv"), 10, 32)
+	)
+
+	order, err := pb.NewCheckoutServiceClient(fe.checkoutSvcConn).
+		PlaceOrder(r.Context(), &pb.PlaceOrderRequest{
+			Email: email,
+			CreditCard: &pb.CreditCardInfo{
+				CreditCardNumber:          ccNumber,
+				CreditCardExpirationMonth: int32(ccMonth),
+				CreditCardExpirationYear:  int32(ccYear),
+				CreditCardCvv:             int32(ccCVV)},
+			UserId:       sessionID(r),
+			UserCurrency: currentCurrency(r),
+			Address: &pb.Address{
+				StreetAddress: streetAddress,
+				City:          city,
+				State:         state,
+				ZipCode:       int32(zipCode),
+				Country:       country},
+		})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to complete the order: %+v", err), http.StatusInternalServerError)
+		return
+	}
+	log.Printf("order #%s completed", order.GetOrder().GetOrderId())
+
+	order.GetOrder().GetItems()
+	recommendations, _ := fe.getRecommendations(r.Context(), sessionID(r), nil)
+
+	if err := templates.ExecuteTemplate(w, "order", map[string]interface{}{
 		"session_id":      sessionID(r),
+		"user_currency":   currentCurrency(r),
+		"order":           order.GetOrder(),
 		"recommendations": recommendations,
-		"cart_size":       len(cart),
-		"items":           items,
 	}); err != nil {
 		log.Println(err)
 	}
