@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	pb "frontend/genproto"
 
@@ -79,10 +78,7 @@ func (fe *frontendServer) getShippingQuote(ctx context.Context, items []*pb.Cart
 		return nil, err
 	}
 	localized, err := fe.convertCurrency(ctx, quote.GetCostUsd(), currency)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert currency for shipping cost: %+v", err)
-	}
-	return localized, nil
+	return localized, errors.Wrap(err, "failed to convert currency for shipping cost")
 }
 
 func (fe *frontendServer) getRecommendations(ctx context.Context, userID string, productIDs []string) ([]*pb.Product, error) {
@@ -95,7 +91,7 @@ func (fe *frontendServer) getRecommendations(ctx context.Context, userID string,
 	for i, v := range resp.GetProductIds() {
 		p, err := fe.getProduct(ctx, v)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get recommended product info (#%s): %+v", v, err)
+			return nil, errors.Wrapf(err, "failed to get recommended product info (#%s)", v)
 		}
 		out[i] = p
 	}

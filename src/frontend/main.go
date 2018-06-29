@@ -68,31 +68,12 @@ func main() {
 	mustMapEnv(&svc.checkoutSvcAddr, "CHECKOUT_SERVICE_ADDR")
 	mustMapEnv(&svc.shippingSvcAddr, "SHIPPING_SERVICE_ADDR")
 
-	var err error
-	svc.currencySvcConn, err = grpc.DialContext(ctx, svc.currencySvcAddr, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("failed to connect currency service: %+v", err)
-	}
-	svc.productCatalogSvcConn, err = grpc.DialContext(ctx, svc.productCatalogSvcAddr, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("failed to connect productcatalog service: %+v", err)
-	}
-	svc.cartSvcConn, err = grpc.DialContext(ctx, svc.cartSvcAddr, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("failed to connect cart service at %s: %+v", svc.cartSvcAddr, err)
-	}
-	svc.recommendationSvcConn, err = grpc.DialContext(ctx, svc.recommendationSvcAddr, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("failed to connect recommendation service at %s: %+v", svc.recommendationSvcAddr, err)
-	}
-	svc.shippingSvcConn, err = grpc.DialContext(ctx, svc.shippingSvcAddr, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("failed to connect shipping service at %s: %+v", svc.shippingSvcAddr, err)
-	}
-	svc.checkoutSvcConn, err = grpc.DialContext(ctx, svc.checkoutSvcAddr, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("failed to connect checkout service at %s: %+v", svc.checkoutSvcAddr, err)
-	}
+	mustConnGRPC(ctx, &svc.currencySvcConn, svc.currencySvcAddr)
+	mustConnGRPC(ctx, &svc.productCatalogSvcConn, svc.productCatalogSvcAddr)
+	mustConnGRPC(ctx, &svc.cartSvcConn, svc.cartSvcAddr)
+	mustConnGRPC(ctx, &svc.recommendationSvcConn, svc.recommendationSvcAddr)
+	mustConnGRPC(ctx, &svc.shippingSvcConn, svc.shippingSvcAddr)
+	mustConnGRPC(ctx, &svc.checkoutSvcConn, svc.checkoutSvcAddr)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", ensureSessionID(svc.homeHandler)).Methods(http.MethodGet, http.MethodHead)
@@ -104,8 +85,8 @@ func main() {
 	r.HandleFunc("/logout", svc.logoutHandler).Methods(http.MethodGet)
 	r.HandleFunc("/cart/checkout", ensureSessionID(svc.placeOrderHandler)).Methods(http.MethodPost)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
-	log.Printf("starting server on :" + srvPort)
-	log.Fatal(http.ListenAndServe(":"+srvPort, r))
+	log.Printf("starting server on " + addr + ":" + srvPort)
+	log.Fatal(http.ListenAndServe(addr+":"+srvPort, r))
 }
 
 func mustMapEnv(target *string, envKey string) {
