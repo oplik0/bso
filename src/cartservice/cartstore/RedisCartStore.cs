@@ -88,8 +88,8 @@ namespace cartservice.cartstore
             try
             {
                 var db = redis.GetDatabase();
-                // Access the cart from the cache
 
+                // Access the cart from the cache
                 var value = await db.HashGetAsync(userId, CART_FIELD_NAME);
 
                 if (!value.IsNull)
