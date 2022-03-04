@@ -28,6 +28,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from logger import getJSONLogger
 
+
 logger = getJSONLogger('recommendationservice-server')
 
 worker_pool = futures.ThreadPoolExecutor(max_workers=10)
