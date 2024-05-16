@@ -1,0 +1,12 @@
+dependencies:
+- name: opentelemetry-collector
+  repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+  version: 0.93.1
+- name: influxdb2
+  repository: https://helm.influxdata.com/
+  version: 2.1.2
+- name: grafana
+  repository: https://grafana.github.io/helm-charts
+  version: 8.0.0
+digest: sha256:162c9ee13251fd179ce53282f1d2f93e40a840bca51ae27b4c61800282c97dcb
+generated: "2024-06-06T13:03:32.0217803+02:00"

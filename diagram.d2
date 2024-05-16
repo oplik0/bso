@@ -1,0 +1,72 @@
+direction: right
+cluster {
+    icon: https://icons.terrastruct.com/azure%2F_Companies%2FKubernetes.svg
+    label: "Klaster Kubernetes"
+    api {
+        icon: https://raw.githubusercontent.com/kubernetes/community/master/icons/svg/control_plane_components/labeled/api.svg
+        label: "K8S API"
+    }
+    pods {
+        label: "Mikrousługi"
+        grid-rows: 3
+        
+        pod1 {
+            icon: https://raw.githubusercontent.com/kubernetes/community/master/icons/svg/resources/labeled/pod.svg
+            label: "Pod 1"
+        }
+        pod2 {
+            icon: https://raw.githubusercontent.com/kubernetes/community/master/icons/svg/resources/labeled/pod.svg
+            label: "Pod 2"
+        }
+        podn {
+            icon: https://raw.githubusercontent.com/kubernetes/community/master/icons/svg/resources/labeled/pod.svg
+            label: "Pod N"
+        }
+        
+        pod1 -- pod2 -- podn
+    }
+
+    direction: right
+    model {
+        icon: https://icons.terrastruct.com/gcp%2FProducts%20and%20services%2FAI%20and%20Machine%20Learning%2FAI%20Platform.svg
+        label: "Usługa ML"
+    }
+    otel {
+        icon: https://raw.githubusercontent.com/cncf/artwork/main/projects/opentelemetry/icon/color/opentelemetry-icon-color.svg
+        label: OpenTelemetry
+    }
+    influxdb {
+        icon: https://www.svgrepo.com/download/353901/influxdb.svg
+    }
+    grafana {
+        icon: https://upload.wikimedia.org/wikipedia/commons/3/3b/Grafana_icon.svg
+    }
+    services {
+        label: Usługi
+        icon: https://raw.githubusercontent.com/kubernetes/community/master/icons/svg/resources/labeled/svc.svg
+    }
+    api -> otel
+    services -> otel
+    model -> influxdb
+    model <- influxdb
+    pods <- services
+    pods -> otel -> influxdb -> grafana
+}
+cluster -> cluster.api
+
+
+admin {
+    shape: person
+    label: "Administrator"
+    width: 100
+    height: 100
+}
+user {
+    shape: person
+    label: "Użytkownicy"
+    width: 100
+    height: 100
+}
+
+cluster.grafana <- admin
+cluster.services <- user
