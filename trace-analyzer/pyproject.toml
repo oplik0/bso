@@ -5,7 +5,9 @@ description = "Add your description here"
 authors = [
     { name = "Opliko", email = "opliko.reg@protonmail.com" }
 ]
-dependencies = []
+dependencies = [
+    "influxdb-client[ciso,async,extra]>=1.43.0",
+]
 readme = "README.md"
 requires-python = ">= 3.8"
 
