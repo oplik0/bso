@@ -172,7 +172,7 @@ func main() {
 func initOtelTracing(ctx context.Context, log logrus.FieldLogger) *sdktrace.TracerProvider {
 	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	if endpoint == "" {
-		endpoint = "opentelemetry-collector:4317"
+		endpoint = "bso-opentelemetry-collector:4317"
 	}
 
 	// Set GRPC options to establish an insecure connection to an OpenTelemetry Collector

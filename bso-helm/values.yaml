@@ -49,16 +49,16 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
-environmentVariables:
+env:
+    - name: DOMAIN
+      value: grafana.example.com
+    - name: EMAIL
+      value: test@example.com
     - name: INFLUXDB2_TOKEN
       valueFrom:
         secretKeyRef:
-          name: token-secret
-          key: token
-    - name: DOMAIN
-      value: example.com
-    - name: EMAIL
-      value: test@example.com
+          name: influxdb-auth
+          key: admin-token
 
 ingress-nginx:
   controller:
@@ -67,7 +67,7 @@ ingress-nginx:
       opentelemetry-config: "/etc/nginx/opentelemtry.toml"
       opentelemetry-operation-name: "HTTP $request_method $service_name $uri"
       OpentelemetryTrustIncomingSpan: "true"
-      otlp-collector-host: "opentelemetry-collector"
+      otlp-collector-host: "bso-collector-0"
       otlp-collector-port: "4317"
       otel-max-queuesize: "2048"
       otel-schedule-delay-millis: "5000"
@@ -80,13 +80,21 @@ ingress-nginx:
       enabled: true
 opentelemetry-collector:
   image:
-    repository: "otel/opentelemetry-collector-contrib"
-  mode: daemonset
+    repository: otel/opentelemetry-collector-contrib
+  mode: statefulset
+  enabled: true
   config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
     exporters:
       influxdb:
-        endpoint: "http://influxdb-influxdb2/"
-        token: ${INFLUXDB2_TOKEN}
+        endpoint: "http://bso-influxdb2"
+        token: '{{- $influxDBSecret := (lookup "v1" "Secret" .Release.Namespace "influxdb-auth").data }}{{- $influxDBToken := (get $influxDBSecret "admin-token") | b64dec }}{{ $influxDBToken }}'
         metrics_schema: telegraf-prometheus-v2
         bucket: otel
         org: influxdata
@@ -105,17 +113,26 @@ opentelemetry-collector:
           exporters:
             - influxdb
             - debug
+          receivers:
+            - otlp
+          processors:
+            - batch
         traces:
           exporters:
             - influxdb
             - debug
+          receivers:
+            - otlp
+          processors:
+            - batch
         metrics:
           exporters:
             - influxdb
             - debug
-  ports:
-    metrics:
-      enabled: true
+          receivers:
+            - otlp
+          processors:
+            - batch
   presets:
     kubernetesAttributes:
       enabled: true
@@ -124,10 +141,24 @@ opentelemetry-collector:
     logsCollection:
       enabled: true
       includeCollectorLogs: true
+opentelemetry-kube-stack:
+  opentelemetry-operator:
+    enabled: true
+    manager:
+      collectorImage:
+        repository: otel/opentelemetry-collector-contrib
+    admissionWebhooks:
+      certManager:
+        enabled: false
+      autoGenerateCert:
+        enabled: true
+    
+    # ports:
+    # metrics:
+    #   enabled: true
   # podMonitor:
   #   enabled: true
-  serviceMonitor:
-    enabled: true
+  
   # resources:
   #   limits:
   #     cpu: 500m
@@ -141,9 +172,16 @@ influxdb2:
     organization: influxdata
     bucket: otel
     user: admin
-    existingSecret: token-secret
+    retentionPolicy: 365d
+    token: "testtoken"
+    existingSecret: influxdb-auth
 
 grafana:
+  envFromSecret: influxdb-auth
+  admin:
+    existingSecret: "grafana"
+    userKey: username
+    passwordKey: password
   datasources:
     datasources.yaml:
       apiVersion: 1
@@ -151,52 +189,51 @@ grafana:
       - name: InfluxDB
         type: influxdb
         access: proxy
-        url: http://influxdb-influxdb2:8086
+        url: http://bso-influxdb2
         jsonData:
           version: Flux
           organization: influxdata
           defaultBucket: otel
           tlsSkipVerify: true
         secureJsonData:
-          token: ${INFLUXDB2_TOKEN}
+          token: ${admin-token}
   ingress:
     enabled: true
     hosts:
-      - ${DOMAIN}
-    path: /grafana
+      - grafana.example.com # templating should work here but I've had some issues :(
     ingressClassName: nginx
   persistance:
     enabled: true
   grafana.ini:
     domain: ${DOMAIN}
-    root_url: "%(protocol)s://%(domain)s/grafana"
+    root_url: "%(protocol)s://%(domain)s"
     serve_from_sub_path: true
-  alerting:
-    rules.yaml:
-      apiVersion: 1
-      groups:
-        - orgId: 1
-          name: '{{ .Chart.Name }}_group'
-          interval: 60s
-          rules:
-          - uid: my_id_1
-            title: my_first_rule
-            condition: A
-            data:
-              - refId: A
-                datasourceUid: '-100'
-                model:
-                  datasource:
-                    type: influxdb
-                  expression: 1==0
-                  intervalMs: 1000
-                  maxDataPoints: 43200
-                  refId: A
-                  type: math
-            dashboardUid: dashboard
-            panelId: 123
-            noDataState: Alerting
-            for: 60s
+  # alerting:
+  #   rules.yaml:
+  #     apiVersion: 1
+  #     groups:
+  #       - orgId: 1
+  #         name: '{{ .Chart.Name }}_group'
+  #         interval: 60s
+  #         rules:
+  #         - uid: my_id_1
+  #           title: my_first_rule
+  #           condition: A
+  #           data:
+  #             - refId: A
+  #               datasourceUid: '-100'
+  #               model:
+  #                 datasource:
+  #                   type: influxdb
+  #                 expression: 1==0
+  #                 intervalMs: 1000
+  #                 maxDataPoints: 43200
+  #                 refId: A
+  #                 type: math
+  #           dashboardUid: dashboard
+  #           panelId: 123
+  #           noDataState: Alerting
+  #           for: 60s
     contactpoints.yaml:
       - orgId: 1
         name: admin

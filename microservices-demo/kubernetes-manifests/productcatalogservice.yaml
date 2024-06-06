@@ -22,7 +22,7 @@ spec:
         - name: PORT
           value: "3550"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: opentelemetry-collector:4317
+          value: bso-opentelemetry-collector:4317
         - name: POD_IP
           valueFrom:
             fieldRef:
