@@ -71,7 +71,6 @@ type frontendServer struct {
 	adSvcConn *grpc.ClientConn
 }
 
-var CacheTrack *CacheTracker
 var PercentNormal = 75
 var CacheUserThreshold = 35000
 var CacheMarkerThreshold = 30000
@@ -109,8 +108,6 @@ func main() {
 	if err == nil {
 		CacheMarkerThreshold = cmt
 	}
-	apiKey := os.Getenv("HONEYCOMB_API_KEY")
-	CacheTrack = NewCacheTracker(CacheUserThreshold, CacheMarkerThreshold, apiKey, log)
 
 	srvPort := port
 	if os.Getenv("PORT") != "" {
@@ -167,7 +164,6 @@ func main() {
 	handler = &logHandler{log: log, next: handler} // add logging
 	handler = ensureSessionID(handler)             // add session ID
 
-	CacheTrack.Track(ctx, svc)
 
 	log.Infof("starting server on " + addr + ":" + srvPort)
 	log.Fatal(http.ListenAndServe(addr+":"+srvPort, handler))

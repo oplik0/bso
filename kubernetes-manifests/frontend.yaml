@@ -68,11 +68,6 @@ spec:
             value: "26000"
           - name: CACHE_USER_THRESHOLD
             value: "35000"
-          - name: HONEYCOMB_API_KEY
-            valueFrom:
-              secretKeyRef:
-                name: honeycomb
-                key: api-key
           resources:
             requests:
               cpu: 100m

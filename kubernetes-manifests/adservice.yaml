@@ -25,11 +25,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
-        - name: HONEYCOMB_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: honeycomb
-              key: api-key
         - name: OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
           value: grpc
         - name: OTEL_EXPORTER_OTLP_LOGS_PROTOCOL
