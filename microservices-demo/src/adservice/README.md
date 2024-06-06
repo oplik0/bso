@@ -9,7 +9,7 @@ In Java, the OpenTelemetry SDK is initialized using a Java agent and environment
 In this example we use the [Honeycomb OpenTelemetry Distro for Java](https://github.com/honeycombio/honeycomb-opentelemetry-java).
 This is a wrapper to the standard OpenTelemetry Java agent, providing shortcuts to configure for Honeycomb output, and attach a Span processor which will export Baggage members as Span attributes.
 In this example, we are using an OpenTelmetry Collector in our telemetry pipeline, the following environment variables are used to point ot that configuration:
-- HONEYCOMB_API_ENDPOINT=http://opentelemetry-collector:4317
+- HONEYCOMB_API_ENDPOINT=http://bso-opentelemetry-collector:4317
 - SERVICE_NAME=adservice
 
 Other environment variables may be required with other configurations, please refer to the Honeycomb [documentation](https://docs.honeycomb.io/getting-data-in/java/opentelemetry-distro/) for usage of this agent.
