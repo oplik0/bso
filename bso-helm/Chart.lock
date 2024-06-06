@@ -1,12 +1,18 @@
 dependencies:
+- name: ingress-nginx
+  repository: https://kubernetes.github.io/ingress-nginx
+  version: 4.10.1
+- name: opentelemetry-kube-stack
+  repository: ""
+  version: ^0.0.6
 - name: opentelemetry-collector
   repository: https://open-telemetry.github.io/opentelemetry-helm-charts
-  version: 0.93.1
+  version: 0.93.3
 - name: influxdb2
   repository: https://helm.influxdata.com/
   version: 2.1.2
 - name: grafana
   repository: https://grafana.github.io/helm-charts
-  version: 8.0.0
-digest: sha256:162c9ee13251fd179ce53282f1d2f93e40a840bca51ae27b4c61800282c97dcb
-generated: "2024-06-06T13:03:32.0217803+02:00"
+  version: 8.0.2
+digest: sha256:da43850c280a93b98f18cbdc9ae8e776ee0f8dd5168e2e122a0d292ccd72c2b8
+generated: "2024-06-12T20:32:53.2778301+02:00"
