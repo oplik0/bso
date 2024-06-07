@@ -1,2 +1,5 @@
 *.tgz
 diagram.svg
+
+values.yaml
+!*/**/values.yaml

@@ -14,5 +14,11 @@ dependencies:
 - name: grafana
   repository: https://grafana.github.io/helm-charts
   version: 8.0.2
-digest: sha256:da43850c280a93b98f18cbdc9ae8e776ee0f8dd5168e2e122a0d292ccd72c2b8
-generated: "2024-06-12T20:32:53.2778301+02:00"
+- name: tempo
+  repository: https://grafana.github.io/helm-charts
+  version: 1.9.0
+- name: prometheus
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 25.21.0
+digest: sha256:abe284facc28b46e58fef0d58eb38840357912249ef82a85fffa6f652a46c69b
+generated: "2024-06-13T00:49:50.7705512+02:00"

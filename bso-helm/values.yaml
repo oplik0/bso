@@ -49,17 +49,10 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
-env:
-    - name: DOMAIN
-      value: grafana.example.com
-    - name: EMAIL
-      value: test@example.com
-    - name: INFLUXDB2_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: influxdb-auth
-          key: admin-token
 
+env:
+  - name: DISCORD_WEBHOOK
+    value: https://discord.com/api/webhooks/123456789/abcdefg
 ingress-nginx:
   controller:
     config:
@@ -107,32 +100,46 @@ opentelemetry-collector:
           initial_interval: 1s
           max_interval: 3s
           max_elapsed_time: 10s
+      otlp:
+        endpoint: "http://bso-tempo:4317"
+        tls:
+          insecure: true
+      otlp/2:
+        endpoint: "http://bso-prometheus-server:4317"
     service:
       pipelines:
         logs:
           exporters:
             - influxdb
             - debug
+            - otlp/2
           receivers:
             - otlp
           processors:
             - batch
+            - memory_limiter
         traces:
           exporters:
             - influxdb
+            - otlp
             - debug
+            - otlp/2
           receivers:
             - otlp
           processors:
             - batch
+            - memory_limiter
         metrics:
           exporters:
             - influxdb
             - debug
+            - otlp
+            - otlp/2
           receivers:
             - otlp
           processors:
             - batch
+            - memory_limiter
   presets:
     kubernetesAttributes:
       enabled: true
@@ -182,6 +189,298 @@ grafana:
     existingSecret: "grafana"
     userKey: username
     passwordKey: password
+  smtp:
+    existingSecret: email
+  dashboards:
+    default:
+      main:
+        json: |
+          {
+            "annotations": {
+              "list": [
+                {
+                  "builtIn": 1,
+                  "datasource": {
+                    "type": "grafana",
+                    "uid": "-- Grafana --"
+                  },
+                  "enable": true,
+                  "hide": true,
+                  "iconColor": "rgba(0, 211, 255, 1)",
+                  "name": "Annotations & Alerts",
+                  "type": "dashboard"
+                }
+              ]
+            },
+            "editable": true,
+            "fiscalYearStartMonth": 0,
+            "graphTooltip": 0,
+            "links": [],
+            "panels": [
+              {
+                "datasource": {
+                  "type": "tempo",
+                  "uid": "tempo"
+                },
+                "gridPos": {
+                  "h": 21,
+                  "w": 9,
+                  "x": 0,
+                  "y": 0
+                },
+                "id": 1,
+                "options": {
+                  "edges": {},
+                  "nodes": {}
+                },
+                "targets": [
+                  {
+                    "datasource": {
+                      "type": "tempo",
+                      "uid": "tempo"
+                    },
+                    "limit": 20,
+                    "queryType": "serviceMap",
+                    "refId": "A",
+                    "tableType": "traces"
+                  }
+                ],
+                "title": "Services",
+                "type": "nodeGraph"
+              },
+              {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prom"
+                },
+                "fieldConfig": {
+                  "defaults": {
+                    "color": {
+                      "mode": "continuous-GrYlRd"
+                    },
+                    "custom": {
+                      "axisBorderShow": false,
+                      "axisCenteredZero": false,
+                      "axisColorMode": "text",
+                      "axisLabel": "",
+                      "axisPlacement": "auto",
+                      "barAlignment": 0,
+                      "drawStyle": "line",
+                      "fillOpacity": 20,
+                      "gradientMode": "scheme",
+                      "hideFrom": {
+                        "legend": false,
+                        "tooltip": false,
+                        "viz": false
+                      },
+                      "insertNulls": false,
+                      "lineInterpolation": "smooth",
+                      "lineWidth": 3,
+                      "pointSize": 5,
+                      "scaleDistribution": {
+                        "type": "linear"
+                      },
+                      "showPoints": "auto",
+                      "spanNulls": false,
+                      "stacking": {
+                        "group": "A",
+                        "mode": "none"
+                      },
+                      "thresholdsStyle": {
+                        "mode": "off"
+                      }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": null
+                        },
+                        {
+                          "color": "red",
+                          "value": 80
+                        }
+                      ]
+                    }
+                  },
+                  "overrides": []
+                },
+                "gridPos": {
+                  "h": 7,
+                  "w": 15,
+                  "x": 9,
+                  "y": 0
+                },
+                "id": 2,
+                "options": {
+                  "legend": {
+                    "calcs": [],
+                    "displayMode": "hidden",
+                    "placement": "right",
+                    "showLegend": false
+                  },
+                  "tooltip": {
+                    "maxHeight": 600,
+                    "mode": "single",
+                    "sort": "none"
+                  }
+                },
+                "targets": [
+                  {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prom"
+                    },
+                    "disableTextWrap": false,
+                    "editorMode": "builder",
+                    "expr": "{status=\"error\"}",
+                    "fullMetaSearch": false,
+                    "includeNullMetadata": true,
+                    "instant": false,
+                    "legendFormat": "__auto",
+                    "range": true,
+                    "refId": "A",
+                    "useBackend": false
+                  }
+                ],
+                "title": "Errors",
+                "type": "timeseries"
+              },
+              {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prom"
+                },
+                "fieldConfig": {
+                  "defaults": {
+                    "color": {
+                      "mode": "continuous-GrYlRd"
+                    },
+                    "custom": {
+                      "axisBorderShow": false,
+                      "axisCenteredZero": false,
+                      "axisColorMode": "text",
+                      "axisLabel": "",
+                      "axisPlacement": "auto",
+                      "barAlignment": 0,
+                      "drawStyle": "line",
+                      "fillOpacity": 20,
+                      "gradientMode": "scheme",
+                      "hideFrom": {
+                        "legend": false,
+                        "tooltip": false,
+                        "viz": false
+                      },
+                      "insertNulls": false,
+                      "lineInterpolation": "smooth",
+                      "lineWidth": 3,
+                      "pointSize": 5,
+                      "scaleDistribution": {
+                        "type": "linear"
+                      },
+                      "showPoints": "auto",
+                      "spanNulls": false,
+                      "stacking": {
+                        "group": "A",
+                        "mode": "none"
+                      },
+                      "thresholdsStyle": {
+                        "mode": "off"
+                      }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": null
+                        },
+                        {
+                          "color": "red",
+                          "value": 80
+                        }
+                      ]
+                    },
+                    "unit": "ms"
+                  },
+                  "overrides": []
+                },
+                "gridPos": {
+                  "h": 14,
+                  "w": 15,
+                  "x": 9,
+                  "y": 7
+                },
+                "id": 3,
+                "options": {
+                  "legend": {
+                    "calcs": [],
+                    "displayMode": "hidden",
+                    "placement": "right",
+                    "showLegend": false
+                  },
+                  "tooltip": {
+                    "maxHeight": 600,
+                    "mode": "single",
+                    "sort": "none"
+                  }
+                },
+                "targets": [
+                  {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "prom"
+                    },
+                    "disableTextWrap": false,
+                    "editorMode": "builder",
+                    "expr": "traces_spanmetrics_latency_sum{span_kind=\"SPAN_KIND_SERVER\"}",
+                    "fullMetaSearch": false,
+                    "includeNullMetadata": false,
+                    "instant": false,
+                    "legendFormat": "{{service}}",
+                    "range": true,
+                    "refId": "A",
+                    "useBackend": false
+                  }
+                ],
+                "title": "Response latency",
+                "type": "timeseries"
+              }
+            ],
+            "refresh": "",
+            "schemaVersion": 39,
+            "tags": [],
+            "templating": {
+              "list": []
+            },
+            "time": {
+              "from": "now-5m",
+              "to": "now"
+            },
+            "timeRangeUpdatedDuringEditOrView": false,
+            "timepicker": {},
+            "timezone": "browser",
+            "title": "Main Dashboard",
+            "uid": "bdomua3ewtptsc",
+            "version": 1,
+            "weekStart": ""
+          }
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
   datasources:
     datasources.yaml:
       apiVersion: 1
@@ -197,50 +496,191 @@ grafana:
           tlsSkipVerify: true
         secureJsonData:
           token: ${admin-token}
+      - name: Tempo
+        type: tempo
+        access: proxy
+        uid: tempo
+        url: http://bso-tempo:3100
+        jsonData:
+          tlsSkipVerify: true
+          tracesToMetrics:
+            datasourceUid: prom
+            spanStartTimeShift: '1h'
+            spanEndTimeShift: '-1h'
+            tags: [{ key: 'service.name', value: 'service' }, { key: 'job' }]
+          serviceMap:
+            datasourceUid: 'prom'
+          nodeGraph:
+            enabled: true
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        uid: prom
+        url: http://bso-prometheus-server
+        jsonData:
+          tlsSkipVerify: true
   ingress:
     enabled: true
     hosts:
-      - grafana.example.com # templating should work here but I've had some issues :(
+      - '{{ .Values.domain }}'
     ingressClassName: nginx
   persistance:
     enabled: true
   grafana.ini:
-    domain: ${DOMAIN}
     root_url: "%(protocol)s://%(domain)s"
     serve_from_sub_path: true
-  # alerting:
-  #   rules.yaml:
-  #     apiVersion: 1
-  #     groups:
-  #       - orgId: 1
-  #         name: '{{ .Chart.Name }}_group'
-  #         interval: 60s
-  #         rules:
-  #         - uid: my_id_1
-  #           title: my_first_rule
-  #           condition: A
-  #           data:
-  #             - refId: A
-  #               datasourceUid: '-100'
-  #               model:
-  #                 datasource:
-  #                   type: influxdb
-  #                 expression: 1==0
-  #                 intervalMs: 1000
-  #                 maxDataPoints: 43200
-  #                 refId: A
-  #                 type: math
-  #           dashboardUid: dashboard
-  #           panelId: 123
-  #           noDataState: Alerting
-  #           for: 60s
+    smtp:
+      enabled: true
+      host: '{{ .Values.email.host }}'
+      from_address: '{{ .Values.email.from_address }}'
+  alerting:
+    rules.yaml:
+      apiVersion: 1
+      groups:
+          - orgId: 1
+            name: alerts
+            folder: alerts
+            interval: 1m
+            rules:
+              - uid: latency
+                title: Latency
+                condition: C
+                data:
+                  - refId: A
+                    relativeTimeRange:
+                      from: 600
+                      to: 0
+                    datasourceUid: prom
+                    model:
+                      datasource:
+                          type: prometheus
+                          uid: prom
+                      disableTextWrap: false
+                      editorMode: builder
+                      exemplar: false
+                      expr: sum by(le) (rate(traces_spanmetrics_latency_sum{span_kind="SPAN_KIND_SERVER"}[$__rate_interval]))
+                      fullMetaSearch: false
+                      hide: false
+                      includeNullMetadata: false
+                      instant: false
+                      intervalMs: 1000
+                      legendFormat: __auto
+                      maxDataPoints: 43200
+                      range: true
+                      refId: A
+                      useBackend: false
+                  - refId: B
+                    relativeTimeRange:
+                      from: 600
+                      to: 0
+                    datasourceUid: __expr__
+                    model:
+                      conditions:
+                          - evaluator:
+                              params:
+                                  - 0
+                                  - 0
+                              type: gt
+                            operator:
+                              type: and
+                            query:
+                              params: []
+                            reducer:
+                              params: []
+                              type: avg
+                            type: query
+                      datasource:
+                          name: Expression
+                          type: __expr__
+                          uid: __expr__
+                      expression: A
+                      hide: false
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                      reducer: last
+                      refId: B
+                      settings:
+                          mode: dropNN
+                      type: reduce
+                  - refId: C
+                    relativeTimeRange:
+                      from: 600
+                      to: 0
+                    datasourceUid: __expr__
+                    model:
+                      conditions:
+                          - evaluator:
+                              params:
+                                  - 100
+                                  - 0
+                              type: gt
+                            operator:
+                              type: and
+                            query:
+                              params: []
+                            reducer:
+                              params: []
+                              type: avg
+                            type: query
+                            unloadEvaluator:
+                              params:
+                                  - 100
+                                  - 0
+                              type: lt
+                      datasource:
+                          name: Expression
+                          type: __expr__
+                          uid: __expr__
+                      expression: B
+                      hide: false
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                      refId: C
+                      type: threshold
+                noDataState: NoData
+                execErrState: Error
+                for: 5m
+                annotations:
+                  summary: High latency detected
+                labels: {}
+                isPaused: false
+                notification_settings:
+                  receiver: admin
     contactpoints.yaml:
-      - orgId: 1
-        name: admin
-        receivers:
-          - uid: admin
+      secret:
+        apiVersion: 1
+        contactPoints:
+          - orgId: 1
             name: admin
-            type: email
-            settings:
-              addresses:
-                - ${EMAIL}
+            receivers:
+              - uid: admin
+                name: admin
+                type: email
+                settings:
+                  addresses: '{{ .Values.email.address }}'
+              - uid: discord
+                name: discord
+                type: discord
+                settings:
+                  url: '{{ .Values.discord.url }}'
+
+tempo:
+  persistence:
+    enabled: true
+  tempo:
+    metricsGenerator:
+      enabled: true
+      remoteWriteUrl: http://bso-prometheus-server/api/v1/write
+
+
+prometheus:
+  server:
+    extraFlags:
+      - web.enable-lifecycle
+      - web.enable-remote-write-receiver
+      - enable-feature=otlp-write-receiver
+    service:
+      additionalPorts:
+        - name: otlp
+          port: 4317
+          targetPort: 4317

@@ -1,0 +1,12 @@
+grafana:
+  email:
+    address: admin@gmail.com
+    from_address: alert@grafana.example.com
+    host: smtp.example.com:25
+    user: username
+    password: secretPassword
+  discord:
+    url: https://discord.com/api/webhooks/123456789/abcdefg
+  ingress:
+    hosts:
+      - grafana.example.com
