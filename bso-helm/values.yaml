@@ -60,7 +60,7 @@ ingress-nginx:
       opentelemetry-config: "/etc/nginx/opentelemtry.toml"
       opentelemetry-operation-name: "HTTP $request_method $service_name $uri"
       OpentelemetryTrustIncomingSpan: "true"
-      otlp-collector-host: "bso-collector-0"
+      otlp-collector-host: "bso-opentelemetry-collector"
       otlp-collector-port: "4317"
       otel-max-queuesize: "2048"
       otel-schedule-delay-millis: "5000"
@@ -646,6 +646,103 @@ grafana:
                 isPaused: false
                 notification_settings:
                   receiver: admin
+              - uid: failures
+                title: Failure Rate
+                condition: C
+                data:
+                  - refId: A
+                    relativeTimeRange:
+                      from: 60
+                      to: 0
+                    datasourceUid: prom
+                    model:
+                      datasource:
+                          type: prometheus
+                          uid: prom
+                      disableTextWrap: false
+                      editorMode: builder
+                      expr: sum by(client, server) (rate(traces_service_graph_request_failed_total[$__rate_interval]))
+                      fullMetaSearch: false
+                      hide: false
+                      includeNullMetadata: true
+                      instant: false
+                      intervalMs: 1000
+                      legendFormat: __auto
+                      maxDataPoints: 43200
+                      range: true
+                      refId: A
+                      useBackend: false
+                  - refId: C
+                    relativeTimeRange:
+                      from: 60
+                      to: 0
+                    datasourceUid: __expr__
+                    model:
+                      conditions:
+                          - evaluator:
+                              params:
+                                  - 0.25
+                              type: gt
+                            operator:
+                              type: and
+                            query:
+                              params:
+                                  - C
+                            reducer:
+                              params: []
+                              type: last
+                            type: query
+                            unloadEvaluator:
+                              params:
+                                  - 0.05
+                              type: lt
+                      datasource:
+                          type: __expr__
+                          uid: __expr__
+                      expression: B
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                      refId: C
+                      type: threshold
+                  - refId: B
+                    relativeTimeRange:
+                      from: 60
+                      to: 0
+                    datasourceUid: __expr__
+                    model:
+                      conditions:
+                          - evaluator:
+                              params:
+                                  - 0
+                                  - 0
+                              type: gt
+                            operator:
+                              type: and
+                            query:
+                              params: []
+                            reducer:
+                              params: []
+                              type: avg
+                            type: query
+                      datasource:
+                          name: Expression
+                          type: __expr__
+                          uid: __expr__
+                      expression: A
+                      hide: false
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                      reducer: max
+                      refId: B
+                      type: reduce
+                noDataState: NoData
+                execErrState: Error
+                for: 5m
+                annotations: {}
+                labels: {}
+                isPaused: false
+                notification_settings:
+                  receiver: admin
     contactpoints.yaml:
       secret:
         apiVersion: 1
@@ -670,6 +767,7 @@ tempo:
   tempo:
     metricsGenerator:
       enabled: true
+      # sadly not template-enabled!
       remoteWriteUrl: http://bso-prometheus-server/api/v1/write
 
 
