@@ -556,11 +556,10 @@ grafana:
                           type: prometheus
                           uid: prom
                       disableTextWrap: false
-                      editorMode: builder
+                      editorMode: code
                       exemplar: false
-                      expr: sum by(le) (rate(traces_spanmetrics_latency_sum{span_kind="SPAN_KIND_SERVER"}[$__rate_interval]))
+                      expr: max by(service) (rate(traces_spanmetrics_latency_sum{span_kind="SPAN_KIND_SERVER"}[$__rate_interval]))
                       fullMetaSearch: false
-                      hide: false
                       includeNullMetadata: false
                       instant: false
                       intervalMs: 1000
@@ -594,10 +593,9 @@ grafana:
                           type: __expr__
                           uid: __expr__
                       expression: A
-                      hide: false
                       intervalMs: 1000
                       maxDataPoints: 43200
-                      reducer: last
+                      reducer: max
                       refId: B
                       settings:
                           mode: dropNN
@@ -611,7 +609,7 @@ grafana:
                       conditions:
                           - evaluator:
                               params:
-                                  - 100
+                                  - 0.75
                                   - 0
                               type: gt
                             operator:
@@ -624,7 +622,7 @@ grafana:
                             type: query
                             unloadEvaluator:
                               params:
-                                  - 100
+                                  - 0.5
                                   - 0
                               type: lt
                       datasource:
@@ -632,7 +630,6 @@ grafana:
                           type: __expr__
                           uid: __expr__
                       expression: B
-                      hide: false
                       intervalMs: 1000
                       maxDataPoints: 43200
                       refId: C
@@ -641,8 +638,106 @@ grafana:
                 execErrState: Error
                 for: 5m
                 annotations:
+                  description: ""
+                  runbook_url: ""
                   summary: High latency detected
-                labels: {}
+                labels:
+                  "": ""
+                isPaused: false
+                notification_settings:
+                  receiver: admin
+              - uid: failures
+                title: Failure Rate
+                condition: C
+                data:
+                  - refId: A
+                    relativeTimeRange:
+                      from: 60
+                      to: 0
+                    datasourceUid: prom
+                    model:
+                      datasource:
+                          type: prometheus
+                          uid: prom
+                      disableTextWrap: false
+                      editorMode: builder
+                      expr: sum by(client, server) (rate(traces_service_graph_request_failed_total[$__rate_interval]))
+                      fullMetaSearch: false
+                      hide: false
+                      includeNullMetadata: true
+                      instant: false
+                      intervalMs: 1000
+                      legendFormat: __auto
+                      maxDataPoints: 43200
+                      range: true
+                      refId: A
+                      useBackend: false
+                  - refId: C
+                    relativeTimeRange:
+                      from: 60
+                      to: 0
+                    datasourceUid: __expr__
+                    model:
+                      conditions:
+                          - evaluator:
+                              params:
+                                  - 0.25
+                              type: gt
+                            operator:
+                              type: and
+                            query:
+                              params:
+                                  - C
+                            reducer:
+                              params: []
+                              type: last
+                            type: query
+                            unloadEvaluator:
+                              params:
+                                  - 0.05
+                              type: lt
+                      datasource:
+                          type: __expr__
+                          uid: __expr__
+                      expression: B
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                      refId: C
+                      type: threshold
+                  - refId: B
+                    relativeTimeRange:
+                      from: 60
+                      to: 0
+                    datasourceUid: __expr__
+                    model:
+                      conditions:
+                          - evaluator:
+                              params:
+                                  - 0
+                                  - 0
+                              type: gt
+                            operator:
+                              type: and
+                            query:
+                              params: []
+                            reducer:
+                              params: []
+                              type: avg
+                            type: query
+                      datasource:
+                          name: Expression
+                          type: __expr__
+                          uid: __expr__
+                      expression: A
+                      hide: false
+                      intervalMs: 1000
+                      maxDataPoints: 43200
+                      reducer: max
+                      refId: B
+                      type: reduce
+                noDataState: NoData
+                execErrState: Error
+                for: 5m
                 isPaused: false
                 notification_settings:
                   receiver: admin
