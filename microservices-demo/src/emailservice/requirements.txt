@@ -10,7 +10,7 @@ backoff==1.10.0
     #   opentelemetry-exporter-otlp-proto-http
 cachetools==4.2.4
     # via google-auth
-certifi==2021.10.8
+certifi==2023.7.22
     # via requests
 charset-normalizer==2.0.10
     # via requests
