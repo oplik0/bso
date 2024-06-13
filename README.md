@@ -13,8 +13,27 @@ Wymagane:
   docker build -t trace-analyzer:latest
   ```
 
-2. Instalacja charta helm:
+2. Konfiguracja
+  ```sh
+  cp values.example.yaml values.yaml
+  ```
+  I edytować:
+  ```yaml
+  grafana:
+  email:
+    address: your@email.com
+    from_address: sending@address.com
+    host: smtp.example.com:25
+    user: username
+    password: secretPassword
+  discord:
+    url: https://discord.com/api/webhooks/123456789/abcdefg
+  ingress:
+    hosts:
+      - grafana.example.com
+  ```
+3. Instalacja charta helm:
   ```bash
   helm package bso-helm
-  helm install bso ./bso-helm-0.1.0.tgz
+  helm install bso ./bso-helm-0.1.0.tgz -f values.yaml
   ```
