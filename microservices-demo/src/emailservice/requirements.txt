@@ -96,7 +96,7 @@ six==1.16.0
     # via
     #   google-auth
     #   grpcio
-urllib3==1.26.7
+urllib3==1.26.19
     # via requests
 wrapt==1.13.3
     # via
