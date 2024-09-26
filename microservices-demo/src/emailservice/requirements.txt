@@ -86,7 +86,7 @@ pyasn1-modules==0.2.8
     # via google-auth
 python-json-logger==2.0.2
     # via -r requirements.in
-requests==2.27.1
+requests==2.32.2
     # via
     #   google-api-core
     #   opentelemetry-exporter-otlp-proto-http
